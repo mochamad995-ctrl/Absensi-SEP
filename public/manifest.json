@@ -4,14 +4,14 @@
   "description": "Aplikasi Presensi & Penilaian Rapot Ekstrakurikuler SMA Progresif Bumi Shalawat",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0d14",
-  "theme_color": "#2563eb",
+  "background_color": "#f8f9ff",
+  "theme_color": "#006c4a",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/sep-icon.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
       "purpose": "any maskable"
     }
   ]

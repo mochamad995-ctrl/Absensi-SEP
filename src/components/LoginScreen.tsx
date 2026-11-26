@@ -46,9 +46,11 @@ export default function LoginScreen({
     <div className="flex min-h-screen items-center justify-center bg-[#f8f9ff] px-4 py-10">
       <div className="w-full max-w-md rounded-2xl border border-[#c6c6cd]/60 bg-white p-7 shadow-[0_8px_30px_rgba(19,27,46,0.08)]">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#131b2e] text-white shadow-md">
-            <Sparkles className="h-7 w-7 text-[#82f5c1]" />
-          </div>
+          <img
+            src="/sep-icon.jpg"
+            alt="Logo SEP"
+            className="mx-auto mb-3 h-20 w-20 rounded-2xl object-cover shadow-md"
+          />
           <h1 className="font-display text-2xl font-extrabold tracking-tight text-[#0b1c30]">
             PRESENSI SEP
           </h1>

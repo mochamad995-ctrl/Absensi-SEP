@@ -549,9 +549,11 @@ export default function HomePage() {
       <header className="sticky top-0 z-40 border-b border-[#e5eeff] bg-white/95 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3.5 md:px-8">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#131b2e] text-[#82f5c1] shadow-sm">
-              <Sparkles className="h-5 w-5" />
-            </div>
+            <img
+              src="/sep-icon.jpg"
+              alt="Logo SEP"
+              className="h-10 w-10 shrink-0 rounded-xl object-cover shadow-sm"
+            />
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-display text-base font-bold tracking-tight text-[#0b1c30]">
