@@ -15,6 +15,8 @@ import {
   CheckCircle2,
   AlertCircle,
   ArrowLeft,
+  Users,
+  Save,
 } from "lucide-react";
 import Link from "next/link";
 import jsPDF from "jspdf";
@@ -69,9 +71,9 @@ export default function AdminPage() {
   const [pinError, setPinError] = useState("");
   const [verifying, setVerifying] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<"absensi" | "rapot" | "laptop">(
-    "absensi"
-  );
+  const [activeTab, setActiveTab] = useState<
+    "absensi" | "rapot" | "laptop" | "bisyaroh"
+  >("absensi");
   const [loading, setLoading] = useState(false);
   const [today, setToday] = useState("");
   const [monitoringAbsensi, setMonitoringAbsensi] = useState<AbsensiRow[]>([]);
@@ -81,6 +83,38 @@ export default function AdminPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [filterTanggalLaptop, setFilterTanggalLaptop] = useState("");
+
+  // Bisyaroh Guru state
+  const [bisyarohPeriods, setBisyarohPeriods] = useState<
+    { name: string; isActive: boolean }[]
+  >([]);
+  const [bisyarohSheet, setBisyarohSheet] = useState("");
+  const [bisyarohDates, setBisyarohDates] = useState<string[]>([
+    "",
+    "",
+    "",
+    "",
+    "",
+  ]);
+  const [bisyarohList, setBisyarohList] = useState<
+    {
+      rowIndex: number;
+      ekstra: string;
+      pengajar: string;
+      kategori: string;
+      p1: string;
+      p2: string;
+      p3: string;
+      p4: string;
+      p5: string;
+      totalHadir: number;
+    }[]
+  >([]);
+  const [loadingBisyaroh, setLoadingBisyaroh] = useState(false);
+  const [savingBisyaroh, setSavingBisyaroh] = useState(false);
+  const [selectedPertemuan, setSelectedPertemuan] = useState<
+    "p1" | "p2" | "p3" | "p4" | "p5"
+  >("p1");
 
   useEffect(() => {
     try {
@@ -118,6 +152,115 @@ export default function AdminPage() {
       loadAdminData();
     }
   }, [isAuth]);
+
+  const loadBisyarohData = async (sheetName?: string) => {
+    setLoadingBisyaroh(true);
+    try {
+      const url = sheetName
+        ? `/api/admin/bisyaroh?sheet=${encodeURIComponent(sheetName)}`
+        : "/api/admin/bisyaroh";
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.success) {
+        setBisyarohPeriods(data.periods || []);
+        setBisyarohSheet(data.currentSheet || "");
+        setBisyarohDates(data.dates || ["", "", "", "", ""]);
+        setBisyarohList(data.list || []);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoadingBisyaroh(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "bisyaroh" && bisyarohList.length === 0) {
+      loadBisyarohData();
+    }
+  }, [activeTab, bisyarohList.length]);
+
+  const handleSaveBisyarohDates = async () => {
+    if (!bisyarohSheet) return;
+    setSavingBisyaroh(true);
+    try {
+      const res = await fetch("/api/admin/bisyaroh", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save_dates",
+          sheetName: bisyarohSheet,
+          dates: bisyarohDates,
+        }),
+      });
+      const data = await res.json();
+      alert(data.message || "Tanggal tersimpan!");
+    } finally {
+      setSavingBisyaroh(false);
+    }
+  };
+
+  const handleSaveBisyarohPresensi = async () => {
+    if (!bisyarohSheet || bisyarohList.length === 0) return;
+    const colMap = { p1: "E", p2: "F", p3: "G", p4: "H", p5: "I" };
+    setSavingBisyaroh(true);
+    try {
+      const res = await fetch("/api/admin/bisyaroh", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save_presensi",
+          sheetName: bisyarohSheet,
+          colLetter: colMap[selectedPertemuan],
+          items: bisyarohList.map((b) => ({
+            rowIndex: b.rowIndex,
+            status: b[selectedPertemuan],
+          })),
+        }),
+      });
+      const data = await res.json();
+      alert(data.message || "Presensi guru tersimpan!");
+    } finally {
+      setSavingBisyaroh(false);
+    }
+  };
+
+  const handleExportBisyarohExcel = () => {
+    if (bisyarohList.length === 0) return;
+    const headers = [
+      "No",
+      "Ekstrakurikuler",
+      "Nama Pengajar",
+      "Kategori",
+      `P1 (${bisyarohDates[0] || "-"})`,
+      `P2 (${bisyarohDates[1] || "-"})`,
+      `P3 (${bisyarohDates[2] || "-"})`,
+      `P4 (${bisyarohDates[3] || "-"})`,
+      `P5 (${bisyarohDates[4] || "-"})`,
+      "Total Hadir",
+    ];
+    const rows = bisyarohList.map((b, idx) => [
+      idx + 1,
+      `"${b.ekstra.replace(/"/g, '""')}"`,
+      `"${b.pengajar.replace(/"/g, '""')}"`,
+      `"${b.kategori.replace(/"/g, '""')}"`,
+      `"${b.p1}"`,
+      `"${b.p2}"`,
+      `"${b.p3}"`,
+      `"${b.p4}"`,
+      `"${b.p5}"`,
+      b.totalHadir,
+    ]);
+    const csv =
+      "\uFEFF" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Rekap_Bisyaroh_Guru_${bisyarohSheet || "SEP"}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -328,6 +471,13 @@ export default function AdminPage() {
 
           <div className="flex items-center gap-2">
             <button
+              onClick={() => window.dispatchEvent(new Event("open-pwa-install"))}
+              className="flex items-center gap-1.5 rounded-lg border border-[#006c4a]/40 bg-[#82f5c1]/40 px-3 py-2 text-xs font-bold text-[#005137] hover:bg-[#82f5c1]"
+            >
+              <FileDown className="h-4 w-4" />
+              <span className="hidden sm:inline">Install App</span>
+            </button>
+            <button
               onClick={loadAdminData}
               disabled={loading}
               className="flex items-center gap-1.5 rounded-lg border border-[#c6c6cd] bg-[#eff4ff] px-3 py-2 text-xs font-bold text-[#0b1c30] hover:bg-[#dce9ff]"
@@ -381,6 +531,17 @@ export default function AdminPage() {
             >
               <Laptop className="h-4 w-4" />
               Rekap Izin Laptop ({izinLaptop.length})
+            </button>
+            <button
+              onClick={() => setActiveTab("bisyaroh")}
+              className={`flex items-center gap-2 whitespace-nowrap border-b-2 py-3 text-sm font-semibold ${
+                activeTab === "bisyaroh"
+                  ? "border-[#006c4a] text-[#006c4a]"
+                  : "border-transparent text-[#45464d]"
+              }`}
+            >
+              <Users className="h-4 w-4" />
+              Absensi Guru (Bisyaroh)
             </button>
           </nav>
         </div>
@@ -607,6 +768,185 @@ export default function AdminPage() {
                 )}
               </tbody>
             </table>
+          </div>
+        )}
+        {/* TAB 4: ABSENSI GURU (BISYAROH) */}
+        {activeTab === "bisyaroh" && (
+          <div className="space-y-4">
+            <div className="rounded-xl border border-[#e5eeff] bg-white p-4 shadow-sm space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-bold uppercase text-[#45464d]">
+                    Periode Sheet:
+                  </span>
+                  <select
+                    value={bisyarohSheet}
+                    onChange={(e) => loadBisyarohData(e.target.value)}
+                    className="rounded-lg border border-[#c6c6cd] bg-[#f8f9ff] px-3 py-1.5 text-xs font-bold text-[#0b1c30]"
+                  >
+                    {bisyarohPeriods.map((p) => (
+                      <option key={p.name} value={p.name}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={handleExportBisyarohExcel}
+                    className="flex items-center gap-1.5 rounded-xl border border-[#006c4a]/40 bg-[#82f5c1]/40 px-3.5 py-2 text-xs font-bold text-[#005137] hover:bg-[#82f5c1]"
+                  >
+                    <FileDown className="h-4 w-4" />
+                    Excel Bisyaroh
+                  </button>
+                  <button
+                    onClick={handleSaveBisyarohPresensi}
+                    disabled={savingBisyaroh}
+                    className="flex items-center gap-1.5 rounded-xl bg-[#006c4a] px-4 py-2 text-xs font-bold text-white hover:bg-[#005137] disabled:opacity-50"
+                  >
+                    <Save className="h-4 w-4" />
+                    Simpan {selectedPertemuan.toUpperCase()}
+                  </button>
+                </div>
+              </div>
+
+              {/* Tanggal Pertemuan P1 - P5 */}
+              <div className="flex flex-wrap items-end gap-2 border-t border-[#eff4ff] pt-3">
+                {(["p1", "p2", "p3", "p4", "p5"] as const).map((pKey, idx) => (
+                  <div key={pKey} className="flex-1 min-w-[110px]">
+                    <label className="mb-1 block text-[10px] font-bold uppercase text-[#45464d]">
+                      Tgl {pKey.toUpperCase()}
+                    </label>
+                    <input
+                      type="text"
+                      value={bisyarohDates[idx] || ""}
+                      onChange={(e) => {
+                        const next = [...bisyarohDates];
+                        next[idx] = e.target.value;
+                        setBisyarohDates(next);
+                      }}
+                      placeholder="dd/mm/yyyy"
+                      className="w-full rounded-lg border border-[#c6c6cd] bg-[#f8f9ff] px-2.5 py-1.5 text-xs font-semibold text-[#0b1c30]"
+                    />
+                  </div>
+                ))}
+                <button
+                  onClick={handleSaveBisyarohDates}
+                  disabled={savingBisyaroh}
+                  className="rounded-lg bg-[#131b2e] px-3 py-2 text-xs font-bold text-white hover:bg-[#213145]"
+                >
+                  Simpan Tanggal
+                </button>
+              </div>
+
+              {/* Pilih Sesi Aktif */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-bold text-[#45464d]">
+                  Input Sesi:
+                </span>
+                {(["p1", "p2", "p3", "p4", "p5"] as const).map((pKey) => (
+                  <button
+                    key={pKey}
+                    onClick={() => setSelectedPertemuan(pKey)}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-bold uppercase ${
+                      selectedPertemuan === pKey
+                        ? "bg-[#131b2e] text-white"
+                        : "bg-[#eff4ff] text-[#45464d]"
+                    }`}
+                  >
+                    {pKey}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="overflow-x-auto rounded-xl border border-[#e5eeff] bg-white shadow-sm">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-[#e5eeff] bg-[#eff4ff] text-xs font-bold uppercase text-[#45464d]">
+                  <tr>
+                    <th className="px-4 py-3">Pengajar</th>
+                    <th className="px-4 py-3">Ekstra</th>
+                    <th className="px-3 py-3 text-center">Status ({selectedPertemuan.toUpperCase()})</th>
+                    <th className="px-3 py-3 text-center">Total Hadir</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#eff4ff]">
+                  {loadingBisyaroh ? (
+                    <tr>
+                      <td colSpan={4} className="py-10 text-center text-[#006c4a]">
+                        <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin" />
+                        Memuat data bisyaroh guru...
+                      </td>
+                    </tr>
+                  ) : (
+                    bisyarohList
+                      .filter((b) => {
+                        const q = searchQuery.trim().toLowerCase();
+                        return (
+                          !q ||
+                          b.pengajar.toLowerCase().includes(q) ||
+                          b.ekstra.toLowerCase().includes(q)
+                        );
+                      })
+                      .map((b) => (
+                        <tr key={b.rowIndex} className="hover:bg-[#f8f9ff]">
+                          <td className="px-4 py-3 font-bold text-[#0b1c30]">
+                            {b.pengajar}
+                          </td>
+                          <td className="px-4 py-3 text-xs font-semibold text-[#006c4a]">
+                            {b.ekstra}
+                          </td>
+                          <td className="px-3 py-3 text-center">
+                            <select
+                              value={b[selectedPertemuan]}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setBisyarohList((prev) =>
+                                  prev.map((item) => {
+                                    if (item.rowIndex !== b.rowIndex) return item;
+                                    const updated = {
+                                      ...item,
+                                      [selectedPertemuan]: val,
+                                    };
+                                    updated.totalHadir = [
+                                      updated.p1,
+                                      updated.p2,
+                                      updated.p3,
+                                      updated.p4,
+                                      updated.p5,
+                                    ].filter(
+                                      (s) => s.toLowerCase() === "hadir"
+                                    ).length;
+                                    return updated;
+                                  })
+                                );
+                              }}
+                              className={`rounded-lg border px-2.5 py-1 text-xs font-bold ${
+                                b[selectedPertemuan].toLowerCase() === "hadir"
+                                  ? "border-[#006c4a]/40 bg-[#82f5c1]/40 text-[#005137]"
+                                  : b[selectedPertemuan].toLowerCase() === "izin"
+                                  ? "border-amber-400 bg-amber-100 text-amber-900"
+                                  : "border-[#c6c6cd] bg-[#eff4ff] text-[#45464d]"
+                              }`}
+                            >
+                              <option value="-">-</option>
+                              <option value="Hadir">Hadir</option>
+                              <option value="Izin">Izin</option>
+                              <option value="Tidak Hadir">Tidak Hadir</option>
+                            </select>
+                          </td>
+                          <td className="px-3 py-3 text-center">
+                            <span className="inline-block rounded-full bg-[#131b2e] px-2.5 py-0.5 text-xs font-extrabold text-[#82f5c1]">
+                              {b.totalHadir}x
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </main>
