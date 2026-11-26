@@ -49,7 +49,12 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const [datesRes, dataRes] = await Promise.all([
+    const bisyarohSheets = allTitles.filter((name) =>
+      name.toUpperCase().startsWith("BISYAROH")
+    );
+    const activeBisyarohSheet = bisyarohSheets[0] || "";
+
+    const [datesRes, dataRes, eksternalRes] = await Promise.all([
       sheets.spreadsheets.values.get({
         spreadsheetId: BISYAROH_SPREADSHEET_ID,
         range: `'${activeSheet}'!E3:I3`,
@@ -58,6 +63,14 @@ export async function GET(req: NextRequest) {
         spreadsheetId: BISYAROH_SPREADSHEET_ID,
         range: `'${activeSheet}'!B4:I200`,
       }),
+      activeBisyarohSheet
+        ? sheets.spreadsheets.values
+            .get({
+              spreadsheetId: BISYAROH_SPREADSHEET_ID,
+              range: `'${activeBisyarohSheet}'!A2:J150`,
+            })
+            .catch(() => ({ data: { values: [] } }))
+        : Promise.resolve({ data: { values: [] } }),
     ]);
 
     const rawDates = datesRes.data.values?.[0] || [];
@@ -100,6 +113,34 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    // Parse Guru Eksternal from BISYAROH sheet
+    const eksternalRows = (eksternalRes.data.values as string[][]) || [];
+    const eksternalList = [];
+    let lastNo = "";
+    let lastKegiatan = "";
+
+    for (const r of eksternalRows) {
+      const no = r[0] ? String(r[0]).trim() : lastNo;
+      const kegiatan = r[1] ? String(r[1]).trim() : lastKegiatan;
+      if (r[0]) lastNo = no;
+      if (r[1]) lastKegiatan = kegiatan;
+
+      const gender = r[2] ? String(r[2]).trim() : "";
+      const pembimbing = r[3] ? String(r[3]).trim() : "";
+      if (!pembimbing && !gender) continue;
+
+      eksternalList.push({
+        no: no || "-",
+        kegiatan: kegiatan || "-",
+        gender: gender || "-",
+        pembimbing: pembimbing || "-",
+        frekuensi: r[4] ? String(r[4]).trim() : "0",
+        nominal: r[5] ? String(r[5]).trim() : "0",
+        subTotal: r[6] ? String(r[6]).trim() : "0",
+        total: r[7] ? String(r[7]).trim() : "0",
+      });
+    }
+
     return NextResponse.json(
       {
         success: true,
@@ -107,6 +148,8 @@ export async function GET(req: NextRequest) {
         currentSheet: activeSheet,
         dates,
         list,
+        bisyarohSheetName: activeBisyarohSheet,
+        eksternalList,
       },
       {
         headers: {

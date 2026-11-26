@@ -115,6 +115,22 @@ export default function AdminPage() {
   const [selectedPertemuan, setSelectedPertemuan] = useState<
     "p1" | "p2" | "p3" | "p4" | "p5"
   >("p1");
+  const [bisyarohSubTab, setBisyarohSubTab] = useState<"semua" | "eksternal">(
+    "semua"
+  );
+  const [bisyarohEksternalSheet, setBisyarohEksternalSheet] = useState("");
+  const [eksternalList, setEksternalList] = useState<
+    {
+      no: string;
+      kegiatan: string;
+      gender: string;
+      pembimbing: string;
+      frekuensi: string;
+      nominal: string;
+      subTotal: string;
+      total: string;
+    }[]
+  >([]);
 
   useEffect(() => {
     try {
@@ -166,6 +182,8 @@ export default function AdminPage() {
         setBisyarohSheet(data.currentSheet || "");
         setBisyarohDates(data.dates || ["", "", "", "", ""]);
         setBisyarohList(data.list || []);
+        setBisyarohEksternalSheet(data.bisyarohSheetName || "");
+        setEksternalList(data.eksternalList || []);
       }
     } catch {
       // ignore
@@ -773,6 +791,82 @@ export default function AdminPage() {
         {/* TAB 4: ABSENSI GURU (BISYAROH) */}
         {activeTab === "bisyaroh" && (
           <div className="space-y-4">
+            {/* Sub-Tab Toggle: Semua Guru vs Guru Eksternal */}
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#e5eeff] bg-white p-3 shadow-sm">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setBisyarohSubTab("semua")}
+                  className={`rounded-lg px-4 py-2 text-xs font-bold transition ${
+                    bisyarohSubTab === "semua"
+                      ? "bg-[#131b2e] text-white"
+                      : "bg-[#eff4ff] text-[#45464d] hover:text-[#0b1c30]"
+                  }`}
+                >
+                  Absensi Semua Guru ({bisyarohList.length})
+                </button>
+                <button
+                  onClick={() => setBisyarohSubTab("eksternal")}
+                  className={`rounded-lg px-4 py-2 text-xs font-bold transition ${
+                    bisyarohSubTab === "eksternal"
+                      ? "bg-[#006c4a] text-white"
+                      : "bg-[#eff4ff] text-[#45464d] hover:text-[#0b1c30]"
+                  }`}
+                >
+                  Guru Eksternal / Bisyaroh ({eksternalList.length})
+                </button>
+              </div>
+              {bisyarohSubTab === "eksternal" && bisyarohEksternalSheet && (
+                <span className="text-xs font-bold text-[#006c4a]">
+                  Sheet: {bisyarohEksternalSheet}
+                </span>
+              )}
+            </div>
+
+            {bisyarohSubTab === "eksternal" ? (
+              <div className="overflow-x-auto rounded-xl border border-[#e5eeff] bg-white shadow-sm">
+                <table className="w-full text-left text-sm">
+                  <thead className="border-b border-[#e5eeff] bg-[#eff4ff] text-xs font-bold uppercase text-[#45464d]">
+                    <tr>
+                      <th className="px-3 py-3 text-center">No</th>
+                      <th className="px-3 py-3">Kegiatan</th>
+                      <th className="px-3 py-3">Gender</th>
+                      <th className="px-3 py-3">Nama Pembimbing</th>
+                      <th className="px-3 py-3 text-center">Frek</th>
+                      <th className="px-3 py-3 text-right">Nominal</th>
+                      <th className="px-3 py-3 text-right">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#eff4ff]">
+                    {eksternalList.map((ex, idx) => (
+                      <tr key={idx} className="hover:bg-[#f8f9ff]">
+                        <td className="px-3 py-2.5 text-center text-xs text-[#45464d]">
+                          {ex.no}
+                        </td>
+                        <td className="px-3 py-2.5 font-bold text-[#0b1c30]">
+                          {ex.kegiatan}
+                        </td>
+                        <td className="px-3 py-2.5 text-xs text-[#45464d]">
+                          {ex.gender}
+                        </td>
+                        <td className="px-3 py-2.5 font-semibold text-[#006c4a]">
+                          {ex.pembimbing}
+                        </td>
+                        <td className="px-3 py-2.5 text-center font-bold">
+                          {ex.frekuensi}
+                        </td>
+                        <td className="px-3 py-2.5 text-right text-xs text-[#45464d]">
+                          {ex.nominal}
+                        </td>
+                        <td className="px-3 py-2.5 text-right font-bold text-[#131b2e]">
+                          {ex.total}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <>
             <div className="rounded-xl border border-[#e5eeff] bg-white p-4 shadow-sm space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-2">
@@ -947,6 +1041,8 @@ export default function AdminPage() {
                 </tbody>
               </table>
             </div>
+              </>
+            )}
           </div>
         )}
       </main>
