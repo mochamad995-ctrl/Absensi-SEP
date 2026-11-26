@@ -14,6 +14,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Sparkles,
+  Laptop,
+  MapPin,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -50,7 +52,7 @@ export default function HomePage() {
   const [session, setSession] = useState<EkstraOption | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<"absensi" | "rapot">("absensi");
+  const [activeTab, setActiveTab] = useState<"absensi" | "rapot" | "laptop" | "denah">("absensi");
   const [students, setStudents] = useState<StudentItem[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [searchAbsensi, setSearchAbsensi] = useState("");
@@ -60,6 +62,19 @@ export default function HomePage() {
   const [loadingRapot, setLoadingRapot] = useState(false);
   const [savingRapot, setSavingRapot] = useState(false);
   const [searchRapot, setSearchRapot] = useState("");
+
+  // Izin Laptop state
+  const [selectedLaptopIds, setSelectedLaptopIds] = useState<number[]>([]);
+  const [laptopKeperluan, setLaptopKeperluan] = useState("Kegiatan Ekstrakurikuler SEP");
+  const [savingLaptop, setSavingLaptop] = useState(false);
+
+  // Denah state
+  const [denahData, setDenahData] = useState<{
+    putra: { title: string; rows: string[][] };
+    putri: { title: string; rows: string[][] };
+  } | null>(null);
+  const [loadingDenah, setLoadingDenah] = useState(false);
+  const [denahGender, setDenahGender] = useState<"Putra" | "Putri">("Putra");
 
   const [klaimOpen, setKlaimOpen] = useState(false);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
@@ -358,6 +373,102 @@ export default function HomePage() {
     doc.save(`Nilai_Rapot_${session.displayName.replace(/\s+/g, "_")}.pdf`);
   };
 
+  // Izin Laptop handlers
+  const toggleLaptopStudent = (rowId: number) => {
+    setSelectedLaptopIds((prev) =>
+      prev.includes(rowId) ? prev.filter((id) => id !== rowId) : [...prev, rowId]
+    );
+  };
+
+  const handleSaveLaptop = async () => {
+    if (!session || selectedLaptopIds.length === 0) {
+      showToast("Pilih minimal 1 siswa untuk izin laptop.", false);
+      return;
+    }
+    setSavingLaptop(true);
+    try {
+      const selectedStudents = students.filter((s) =>
+        selectedLaptopIds.includes(s.rowId)
+      );
+      const res = await fetch("/api/izin-laptop", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: selectedStudents.map((s) => ({
+            nama: s.nama,
+            kelas: s.kelas,
+            ekstra: session.displayName,
+            keperluan: laptopKeperluan,
+          })),
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message, true);
+      } else {
+        showToast(data.message || "Gagal menyimpan izin laptop", false);
+      }
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : "Error koneksi", false);
+    } finally {
+      setSavingLaptop(false);
+    }
+  };
+
+  const handleExportLaptopPDF = () => {
+    if (!session || selectedLaptopIds.length === 0) {
+      showToast("Pilih minimal 1 siswa terlebih dahulu.", false);
+      return;
+    }
+    const selectedStudents = students.filter((s) =>
+      selectedLaptopIds.includes(s.rowId)
+    );
+    const doc = new jsPDF();
+    doc.setFontSize(14);
+    doc.text(`SURAT REKAP IZIN LAPTOP - ${session.displayName}`, 14, 16);
+    doc.setFontSize(10);
+    doc.text(`Pembina: ${session.pengajar}`, 14, 23);
+    doc.text(`Keperluan: ${laptopKeperluan}`, 14, 29);
+    doc.text(
+      `Tanggal: ${new Date().toLocaleDateString("id-ID", { dateStyle: "full" })}`,
+      14,
+      35
+    );
+
+    autoTable(doc, {
+      startY: 42,
+      head: [["No", "Nama Siswa", "Kelas", "Keterangan"]],
+      body: selectedStudents.map((s, idx) => [
+        idx + 1,
+        s.nama,
+        s.kelas,
+        "Diizinkan membawa laptop",
+      ]),
+    });
+
+    doc.save(`Izin_Laptop_${session.displayName.replace(/\s+/g, "_")}.pdf`);
+  };
+
+  // Load Denah when tab opened
+  useEffect(() => {
+    if (activeTab !== "denah" || denahData) return;
+    if (session?.gender?.toLowerCase() === "putri") {
+      setDenahGender("Putri");
+    }
+    setLoadingDenah(true);
+    fetch("/api/denah")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setDenahData({ putra: data.putra, putri: data.putri });
+        } else {
+          showToast(data.message || "Gagal memuat denah", false);
+        }
+      })
+      .catch(() => showToast("Gagal memuat denah dari spreadsheet", false))
+      .finally(() => setLoadingDenah(false));
+  }, [activeTab, denahData, session]);
+
   const stats = useMemo(() => {
     const counts = { Hadir: 0, Izin: 0, Sakit: 0, Alfa: 0, Belum: 0 };
     for (const s of students) {
@@ -434,21 +545,21 @@ export default function HomePage() {
       </header>
 
       {/* Navigation Tabs */}
-      <div className="mb-6 flex gap-2 rounded-2xl border border-slate-800 bg-slate-900/80 p-1.5">
+      <div className="mb-6 grid grid-cols-2 gap-2 rounded-2xl border border-slate-800 bg-slate-900/80 p-1.5 sm:grid-cols-4">
         <button
           onClick={() => setActiveTab("absensi")}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold transition ${
+          className={`flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold transition sm:text-sm ${
             activeTab === "absensi"
               ? "bg-blue-600 text-white shadow-lg"
               : "text-slate-400 hover:text-white"
           }`}
         >
           <ClipboardCheck className="h-4 w-4" />
-          Absensi Harian
+          Absensi
         </button>
         <button
           onClick={() => setActiveTab("rapot")}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold transition ${
+          className={`flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold transition sm:text-sm ${
             activeTab === "rapot"
               ? "bg-blue-600 text-white shadow-lg"
               : "text-slate-400 hover:text-white"
@@ -456,6 +567,28 @@ export default function HomePage() {
         >
           <Award className="h-4 w-4" />
           Penilaian Rapot
+        </button>
+        <button
+          onClick={() => setActiveTab("laptop")}
+          className={`flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold transition sm:text-sm ${
+            activeTab === "laptop"
+              ? "bg-blue-600 text-white shadow-lg"
+              : "text-slate-400 hover:text-white"
+          }`}
+        >
+          <Laptop className="h-4 w-4" />
+          Izin Laptop
+        </button>
+        <button
+          onClick={() => setActiveTab("denah")}
+          className={`flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold transition sm:text-sm ${
+            activeTab === "denah"
+              ? "bg-blue-600 text-white shadow-lg"
+              : "text-slate-400 hover:text-white"
+          }`}
+        >
+          <MapPin className="h-4 w-4" />
+          Denah Kelas
         </button>
       </div>
 
@@ -776,6 +909,209 @@ export default function HomePage() {
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: IZIN LAPTOP */}
+      {activeTab === "laptop" && (
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/90 p-4 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h2 className="text-sm font-bold text-white">
+                  Rekap Izin Laptop Santri (Boarding)
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Centang siswa yang diizinkan membawa laptop untuk kegiatan SEP hari Sabtu.
+                </p>
+              </div>
+              <span className="rounded-lg bg-blue-600/20 px-3 py-1 text-xs font-bold text-blue-300">
+                Terpilih: {selectedLaptopIds.length} siswa
+              </span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="text"
+                value={laptopKeperluan}
+                onChange={(e) => setLaptopKeperluan(e.target.value)}
+                placeholder="Keperluan / alasan izin laptop..."
+                className="flex-1 min-w-[220px] rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2 text-sm text-white placeholder-slate-400 focus:border-blue-500 focus:outline-none"
+              />
+              <button
+                onClick={() =>
+                  setSelectedLaptopIds(
+                    selectedLaptopIds.length === students.length
+                      ? []
+                      : students.map((s) => s.rowId)
+                  )
+                }
+                className="rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-xs font-bold text-slate-200 hover:bg-slate-700"
+              >
+                {selectedLaptopIds.length === students.length
+                  ? "Batal Semua"
+                  : "Pilih Semua"}
+              </button>
+              <button
+                onClick={handleExportLaptopPDF}
+                className="flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-xs font-bold text-slate-200 hover:bg-slate-700"
+              >
+                <FileDown className="h-4 w-4" />
+                PDF
+              </button>
+              <button
+                onClick={handleSaveLaptop}
+                disabled={savingLaptop || selectedLaptopIds.length === 0}
+                className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 disabled:opacity-50"
+              >
+                {savingLaptop ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                Simpan Izin Laptop
+              </button>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/90">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-slate-800 bg-slate-950/80 text-xs uppercase text-slate-400">
+                <tr>
+                  <th className="px-4 py-3 text-center w-12">Pilih</th>
+                  <th className="px-4 py-3">Nama Siswa</th>
+                  <th className="px-4 py-3">Kelas</th>
+                  <th className="px-4 py-3">Kamar</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/80">
+                {students.map((s) => {
+                  const checked = selectedLaptopIds.includes(s.rowId);
+                  return (
+                    <tr
+                      key={s.rowId}
+                      onClick={() => toggleLaptopStudent(s.rowId)}
+                      className={`cursor-pointer transition ${
+                        checked ? "bg-blue-950/40" : "hover:bg-slate-800/40"
+                      }`}
+                    >
+                      <td className="px-4 py-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => {}}
+                          className="h-4 w-4 accent-blue-500"
+                        />
+                      </td>
+                      <td className="px-4 py-3 font-bold text-white">
+                        {s.nama}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="rounded-md bg-sky-500/15 px-2 py-0.5 text-xs font-bold text-sky-300">
+                          {s.kelas}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-slate-300">
+                        {s.kamar || "-"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: DENAH KELAS (PUTRA & PUTRI) */}
+      {activeTab === "denah" && (
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-900/90 p-4">
+            <div>
+              <h2 className="text-sm font-bold text-white">
+                Denah Lokasi Kelas Ekstrakurikuler
+              </h2>
+              <p className="text-xs text-slate-400">
+                Tampilan langsung sesuai tata letak di Google Sheets (terbagi Putra &amp; Putri).
+              </p>
+            </div>
+            <div className="flex gap-2">
+              {(["Putra", "Putri"] as const).map((g) => (
+                <button
+                  key={g}
+                  onClick={() => setDenahGender(g)}
+                  className={`rounded-xl px-4 py-2 text-xs font-bold transition ${
+                    denahGender === g
+                      ? g === "Putra"
+                        ? "bg-blue-600 text-white"
+                        : "bg-pink-600 text-white"
+                      : "bg-slate-800 text-slate-300 hover:text-white"
+                  }`}
+                >
+                  Denah {g}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/90 p-3">
+            {loadingDenah ? (
+              <div className="py-12 text-center text-sky-400">
+                <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin" />
+                Memuat denah dari Google Sheets...
+              </div>
+            ) : !denahData ? (
+              <div className="py-12 text-center text-slate-400">
+                Data denah belum tersedia.
+              </div>
+            ) : (
+              (() => {
+                const activeDenah =
+                  denahGender === "Putra" ? denahData.putra : denahData.putri;
+                const rows = activeDenah.rows || [];
+                if (rows.length === 0) {
+                  return (
+                    <div className="py-12 text-center text-slate-400">
+                      Sheet &ldquo;{activeDenah.title}&rdquo; kosong.
+                    </div>
+                  );
+                }
+                const maxCols = Math.max(...rows.map((r) => r.length), 1);
+                return (
+                  <div>
+                    <div className="mb-2 text-xs font-bold text-sky-400">
+                      Sheet: {activeDenah.title}
+                    </div>
+                    <table className="w-full border-collapse text-xs">
+                      <tbody>
+                        {rows.map((row, rIdx) => (
+                          <tr key={rIdx}>
+                            {Array.from({ length: maxCols }).map((_, cIdx) => {
+                              const val = row[cIdx] || "";
+                              return (
+                                <td
+                                  key={cIdx}
+                                  className={`min-w-[90px] border border-slate-700/80 px-2.5 py-2 text-center ${
+                                    val
+                                      ? rIdx === 0
+                                        ? "bg-blue-950/70 font-bold text-blue-200"
+                                        : "bg-slate-800/60 font-medium text-white"
+                                      : "bg-slate-950/40"
+                                  }`}
+                                >
+                                  {val}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()
+            )}
           </div>
         </div>
       )}
