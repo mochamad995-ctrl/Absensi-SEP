@@ -75,11 +75,18 @@ export async function GET() {
     const putraSheet = allSheets.find((s) => s.properties?.title === putraTitle);
     const putriSheet = allSheets.find((s) => s.properties?.title === putriTitle);
 
-    return NextResponse.json({
-      success: true,
-      putra: parseSheetGrid(putraSheet, putraTitle),
-      putri: parseSheetGrid(putriSheet, putriTitle),
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        putra: parseSheetGrid(putraSheet, putraTitle),
+        putri: parseSheetGrid(putriSheet, putriTitle),
+      },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=7200",
+        },
+      }
+    );
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ success: false, message }, { status: 500 });

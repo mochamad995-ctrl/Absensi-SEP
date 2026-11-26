@@ -10,10 +10,17 @@ export async function GET(req: NextRequest) {
   try {
     const ekstra = req.nextUrl.searchParams.get("ekstra");
 
-    // Jika tidak ada query ?ekstra=..., kembalikan daftar seluruh ekstra dari Info_Ekstra
+    // Jika tidak ada query ?ekstra=..., kembalikan daftar seluruh ekstra dari Info_Ekstra (Edge Cache 10 menit)
     if (!ekstra) {
       const list = await getDaftarEkstra();
-      return NextResponse.json({ success: true, ekstraList: list });
+      return NextResponse.json(
+        { success: true, ekstraList: list },
+        {
+          headers: {
+            "Cache-Control": "public, s-maxage=600, stale-while-revalidate=1200",
+          },
+        }
+      );
     }
 
     const cleanSelected = ekstra.replace(/\u00A0/g, " ").trim();

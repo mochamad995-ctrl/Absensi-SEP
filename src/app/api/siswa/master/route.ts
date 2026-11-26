@@ -33,7 +33,14 @@ export async function GET() {
     }
 
     list.sort((a, b) => a.nama.localeCompare(b.nama, "id", { sensitivity: "base" }));
-    return NextResponse.json({ success: true, students: list });
+    return NextResponse.json(
+      { success: true, students: list },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+        },
+      }
+    );
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ success: false, message, students: [] }, { status: 500 });

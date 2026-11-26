@@ -110,11 +110,37 @@ export default function HomePage() {
       setAuthChecked(true);
     }
 
+    // Cache daftar ekstra di localStorage selama 6 jam untuk hemat FOT Vercel
+    try {
+      const cachedEkstra = localStorage.getItem("presensi_sep_ekstra_cache_v1");
+      if (cachedEkstra) {
+        const parsed = JSON.parse(cachedEkstra);
+        if (parsed.exp > Date.now() && Array.isArray(parsed.data)) {
+          setEkstraList(parsed.data);
+          setLoadingEkstraList(false);
+          return;
+        }
+      }
+    } catch {
+      // ignore
+    }
+
     fetch("/api/ekstra")
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
           setEkstraList(data.ekstraList || []);
+          try {
+            localStorage.setItem(
+              "presensi_sep_ekstra_cache_v1",
+              JSON.stringify({
+                exp: Date.now() + 6 * 60 * 60 * 1000,
+                data: data.ekstraList || [],
+              })
+            );
+          } catch {
+            // ignore
+          }
         }
       })
       .catch(() => {})
@@ -508,12 +534,38 @@ export default function HomePage() {
     if (session?.gender?.toLowerCase() === "putri") {
       setDenahGender("Putri");
     }
+    // Cache denah di localStorage selama 24 jam untuk hemat FOT Vercel
+    try {
+      const cachedDenah = localStorage.getItem("presensi_sep_denah_cache_v1");
+      if (cachedDenah) {
+        const parsed = JSON.parse(cachedDenah);
+        if (parsed.exp > Date.now() && parsed.data) {
+          setDenahData(parsed.data);
+          return;
+        }
+      }
+    } catch {
+      // ignore
+    }
+
     setLoadingDenah(true);
     fetch("/api/denah")
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
-          setDenahData({ putra: data.putra, putri: data.putri });
+          const payload = { putra: data.putra, putri: data.putri };
+          setDenahData(payload);
+          try {
+            localStorage.setItem(
+              "presensi_sep_denah_cache_v1",
+              JSON.stringify({
+                exp: Date.now() + 24 * 60 * 60 * 1000,
+                data: payload,
+              })
+            );
+          } catch {
+            // ignore
+          }
         } else {
           showToast(data.message || "Gagal memuat denah", false);
         }
