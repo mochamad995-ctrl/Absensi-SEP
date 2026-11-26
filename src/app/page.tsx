@@ -40,6 +40,7 @@ interface RapotItem {
   kelas: string;
   gender: string;
   ekstra: string;
+  nilaiLalu?: string;
   nilai: string;
   predikat: string;
   deskripsi: string;
@@ -390,6 +391,41 @@ export default function HomePage() {
     doc.save(`Nilai_Rapot_${session.displayName.replace(/\s+/g, "_")}.pdf`);
   };
 
+  const handleExportRapotExcel = () => {
+    if (!session || rapotStudents.length === 0) return;
+    const headers = [
+      "No",
+      "Nama Siswa",
+      "Kelas",
+      "Gender",
+      "Ekstrakurikuler",
+      "Nilai Lalu",
+      "Nilai Sekarang",
+      "Predikat",
+      "Deskripsi Capaian",
+    ];
+    const rows = rapotStudents.map((s, idx) => [
+      idx + 1,
+      `"${(s.nama || "").replace(/"/g, '""')}"`,
+      `"${(s.kelas || "").replace(/"/g, '""')}"`,
+      `"${(s.gender || "").replace(/"/g, '""')}"`,
+      `"${(s.ekstra || session.displayName).replace(/"/g, '""')}"`,
+      `"${(s.nilaiLalu || "-").replace(/"/g, '""')}"`,
+      `"${(s.nilai || "").replace(/"/g, '""')}"`,
+      `"${(s.predikat || "-").replace(/"/g, '""')}"`,
+      `"${(s.deskripsi || "-").replace(/"/g, '""')}"`,
+    ]);
+    const csvContent =
+      "\uFEFF" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Nilai_Rapot_${session.displayName.replace(/\s+/g, "_")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   // Izin Laptop handlers
   const toggleLaptopStudent = (rowId: number) => {
     setSelectedLaptopIds((prev) =>
@@ -573,13 +609,22 @@ export default function HomePage() {
             </div>
           </div>
 
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-1.5 rounded-lg bg-[#ba1a1a] px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#93000a]"
-          >
-            <LogOut className="h-4 w-4" />
-            <span className="hidden sm:inline">Keluar /</span> Logout
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => window.dispatchEvent(new Event("open-pwa-install"))}
+              className="flex items-center gap-1.5 rounded-lg border border-[#c6c6cd] bg-[#eff4ff] px-3 py-2 text-xs font-semibold text-[#0b1c30] transition hover:bg-[#dce9ff]"
+            >
+              <FileDown className="h-4 w-4 text-[#006c4a]" />
+              <span className="hidden sm:inline">Install App</span>
+            </button>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-1.5 rounded-lg bg-[#ba1a1a] px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#93000a]"
+            >
+              <LogOut className="h-4 w-4" />
+              <span className="hidden sm:inline">Keluar /</span> Logout
+            </button>
+          </div>
         </div>
 
         {/* Navigation Tabs */}
@@ -756,7 +801,7 @@ export default function HomePage() {
                           {s.nama}
                         </td>
                         <td className="px-4 py-3">
-                          <span className="rounded-md bg-[#dae2fd] px-2 py-0.5 text-xs font-bold text-[#131b2e]">
+                          <span className="inline-block whitespace-nowrap rounded-md bg-[#dae2fd] px-2.5 py-0.5 text-xs font-bold text-[#131b2e]">
                             {s.kelas}
                           </span>
                         </td>
@@ -931,6 +976,13 @@ export default function HomePage() {
                   PDF
                 </button>
                 <button
+                  onClick={handleExportRapotExcel}
+                  className="flex items-center gap-1.5 rounded-xl border border-[#006c4a]/40 bg-[#82f5c1]/40 px-3.5 py-2.5 text-xs font-bold text-[#005137] hover:bg-[#82f5c1]"
+                >
+                  <FileDown className="h-4 w-4" />
+                  Excel
+                </button>
+                <button
                   onClick={handleSaveRapot}
                   disabled={savingRapot || rapotStudents.length === 0}
                   className="flex items-center gap-1.5 rounded-xl bg-[#006c4a] px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-[#005137] disabled:opacity-50"
@@ -960,6 +1012,7 @@ export default function HomePage() {
                     <th className="w-12 px-3 py-3.5 text-center">No</th>
                     <th className="px-3 py-3.5">Nama Siswa</th>
                     <th className="px-3 py-3.5">Kelas</th>
+                    <th className="px-3 py-3.5 text-center whitespace-nowrap">Nilai Lalu</th>
                     <th className="px-3 py-3.5 text-center">Nilai</th>
                     <th className="px-3 py-3.5 text-center">Predikat</th>
                     <th className="px-3 py-3.5">Deskripsi Capaian</th>
@@ -1006,8 +1059,13 @@ export default function HomePage() {
                             {s.nama}
                           </td>
                           <td className="px-3 py-3">
-                            <span className="rounded-md bg-[#dae2fd] px-2 py-0.5 text-xs font-bold text-[#131b2e]">
+                            <span className="inline-block whitespace-nowrap rounded-md bg-[#dae2fd] px-2.5 py-0.5 text-xs font-bold text-[#131b2e]">
                               {s.kelas}
+                            </span>
+                          </td>
+                          <td className="px-3 py-3 text-center">
+                            <span className="inline-block rounded-md bg-[#eff4ff] px-2 py-1 text-xs font-bold text-[#45464d]">
+                              {s.nilaiLalu || "-"}
                             </span>
                           </td>
                           <td className="px-3 py-3 text-center">
@@ -1141,7 +1199,7 @@ export default function HomePage() {
                           {s.nama}
                         </td>
                         <td className="px-4 py-3">
-                          <span className="rounded-md bg-[#dae2fd] px-2 py-0.5 text-xs font-bold text-[#131b2e]">
+                          <span className="inline-block whitespace-nowrap rounded-md bg-[#dae2fd] px-2.5 py-0.5 text-xs font-bold text-[#131b2e]">
                             {s.kelas}
                           </span>
                         </td>

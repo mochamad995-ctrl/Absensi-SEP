@@ -48,8 +48,13 @@ export default function PwaInstallBanner() {
       setShowBanner(true);
     };
 
+    const openHandler = () => setShowBanner(true);
+    window.addEventListener("open-pwa-install", openHandler);
     window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
+    return () => {
+      window.removeEventListener("open-pwa-install", openHandler);
+      window.removeEventListener("beforeinstallprompt", handler);
+    };
   }, []);
 
   const handleInstall = async () => {

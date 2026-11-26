@@ -55,6 +55,7 @@ export async function GET(req: NextRequest) {
         kelas: s.kelas,
         gender: s.gender,
         ekstra: cleanSelected,
+        nilaiLalu: s.nilai || "-",
         nilai: curNilai,
         predikat: konv.predikat,
         deskripsi: konv.deskripsi,
