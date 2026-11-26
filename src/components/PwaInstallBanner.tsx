@@ -90,9 +90,13 @@ export default function PwaInstallBanner() {
                 Ketuk ikon <Share className="inline h-3.5 w-3.5 text-blue-400" />{" "}
                 lalu pilih <strong className="text-white">Add to Home Screen</strong>.
               </p>
-            ) : (
+            ) : deferredPrompt ? (
               <p className="mt-0.5 text-xs text-slate-300">
                 Pasang di layar utama HP agar akses lebih cepat tanpa buka browser.
+              </p>
+            ) : (
+              <p className="mt-0.5 text-xs text-slate-300">
+                Jika sudah terpasang, buka dari ikon <strong className="text-white">Presensi SEP</strong> di layar utama HP. Jika belum, ketuk menu browser (<strong className="text-white">⋮</strong>) lalu pilih <strong className="text-white">Tambahkan ke Layar Utama / Install App</strong>.
               </p>
             )}
           </div>
