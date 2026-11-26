@@ -70,8 +70,16 @@ export default function HomePage() {
 
   // Denah state
   const [denahData, setDenahData] = useState<{
-    putra: { title: string; rows: string[][] };
-    putri: { title: string; rows: string[][] };
+    putra: {
+      title: string;
+      rows: { val: string; bg: string | null; fg: string | null; bold: boolean }[][];
+      merges: { startRow: number; endRow: number; startCol: number; endCol: number }[];
+    };
+    putri: {
+      title: string;
+      rows: { val: string; bg: string | null; fg: string | null; bold: boolean }[][];
+      merges: { startRow: number; endRow: number; startCol: number; endCol: number }[];
+    };
   } | null>(null);
   const [loadingDenah, setLoadingDenah] = useState(false);
   const [denahGender, setDenahGender] = useState<"Putra" | "Putri">("Putra");
@@ -1070,6 +1078,7 @@ export default function HomePage() {
                 const activeDenah =
                   denahGender === "Putra" ? denahData.putra : denahData.putri;
                 const rows = activeDenah.rows || [];
+                const merges = activeDenah.merges || [];
                 if (rows.length === 0) {
                   return (
                     <div className="py-12 text-center text-slate-400">
@@ -1078,36 +1087,69 @@ export default function HomePage() {
                   );
                 }
                 const maxCols = Math.max(...rows.map((r) => r.length), 1);
+
+                const isCoveredByMerge = (r: number, c: number) =>
+                  merges.some(
+                    (m) =>
+                      r >= m.startRow &&
+                      r < m.endRow &&
+                      c >= m.startCol &&
+                      c < m.endCol &&
+                      !(r === m.startRow && c === m.startCol)
+                  );
+
+                const getMergeSpan = (r: number, c: number) => {
+                  const m = merges.find(
+                    (mg) => mg.startRow === r && mg.startCol === c
+                  );
+                  if (!m) return { rowSpan: 1, colSpan: 1 };
+                  return {
+                    rowSpan: m.endRow - m.startRow,
+                    colSpan: m.endCol - m.startCol,
+                  };
+                };
+
                 return (
                   <div>
                     <div className="mb-2 text-xs font-bold text-sky-400">
                       Sheet: {activeDenah.title}
                     </div>
-                    <table className="w-full border-collapse text-xs">
-                      <tbody>
-                        {rows.map((row, rIdx) => (
-                          <tr key={rIdx}>
-                            {Array.from({ length: maxCols }).map((_, cIdx) => {
-                              const val = row[cIdx] || "";
-                              return (
-                                <td
-                                  key={cIdx}
-                                  className={`min-w-[90px] border border-slate-700/80 px-2.5 py-2 text-center ${
-                                    val
-                                      ? rIdx === 0
-                                        ? "bg-blue-950/70 font-bold text-blue-200"
-                                        : "bg-slate-800/60 font-medium text-white"
-                                      : "bg-slate-950/40"
-                                  }`}
-                                >
-                                  {val}
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                    <div className="overflow-x-auto rounded-xl border border-slate-700 bg-white p-1">
+                      <table className="w-full border-collapse text-xs">
+                        <tbody>
+                          {rows.map((row, rIdx) => (
+                            <tr key={rIdx}>
+                              {Array.from({ length: maxCols }).map((_, cIdx) => {
+                                if (isCoveredByMerge(rIdx, cIdx)) return null;
+                                const { rowSpan, colSpan } = getMergeSpan(
+                                  rIdx,
+                                  cIdx
+                                );
+                                const cell = row[cIdx];
+                                const val = cell?.val || "";
+                                const bg = cell?.bg || "#ffffff";
+                                const fg = cell?.fg || "#0f172a";
+                                return (
+                                  <td
+                                    key={cIdx}
+                                    rowSpan={rowSpan}
+                                    colSpan={colSpan}
+                                    style={{
+                                      backgroundColor: bg,
+                                      color: fg,
+                                      fontWeight: cell?.bold ? 700 : 500,
+                                    }}
+                                    className="min-w-[80px] border border-slate-300 px-2 py-2 text-center align-middle"
+                                  >
+                                    {val}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 );
               })()

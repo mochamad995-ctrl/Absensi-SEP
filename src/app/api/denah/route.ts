@@ -1,5 +1,19 @@
 import { NextResponse } from "next/server";
-import { getSheetsClient, getSheetValues, SPREADSHEET_ID } from "@/lib/sheets";
+import { getSheetsClient, SPREADSHEET_ID } from "@/lib/sheets";
+
+interface ColorRGB {
+  red?: number | null;
+  green?: number | null;
+  blue?: number | null;
+}
+
+function rgbToHex(c?: ColorRGB | null): string | null {
+  if (!c) return null;
+  const r = Math.round((c.red ?? 0) * 255);
+  const g = Math.round((c.green ?? 0) * 255);
+  const b = Math.round((c.blue ?? 0) * 255);
+  return `rgb(${r}, ${g}, ${b})`;
+}
 
 export async function GET() {
   try {
@@ -13,7 +27,6 @@ export async function GET() {
       .map((s) => s.properties?.title || "")
       .filter(Boolean);
 
-    // Cari sheet denah Putra & Putri (sesuai nama di spreadsheet)
     const putraTitle =
       titles.find((t) => t.toUpperCase().includes("SMP")) ||
       titles.find((t) => t.toUpperCase().includes("PUTRA")) ||
@@ -24,15 +37,48 @@ export async function GET() {
       titles.find((t) => t.toUpperCase().includes("PUTRI")) ||
       "DENAH EKSTRA SEP GEDUNG A SMA";
 
-    const [putraRows, putriRows] = await Promise.all([
-      getSheetValues(`'${putraTitle}'!A1:Z60`).catch(() => [] as string[][]),
-      getSheetValues(`'${putriTitle}'!A1:Z60`).catch(() => [] as string[][]),
-    ]);
+    const gridRes = await sheets.spreadsheets.get({
+      spreadsheetId: SPREADSHEET_ID,
+      ranges: [`'${putraTitle}'!A1:P35`, `'${putriTitle}'!A1:P35`],
+      includeGridData: true,
+      fields:
+        "sheets(properties.title,merges,data.rowData.values(formattedValue,effectiveFormat(backgroundColor,textFormat(foregroundColor,bold))))",
+    });
+
+    const parseSheetGrid = (sheetObj: NonNullable<typeof gridRes.data.sheets>[number] | undefined, fallbackTitle: string) => {
+      if (!sheetObj) return { title: fallbackTitle, rows: [], merges: [] };
+      const rowData = sheetObj.data?.[0]?.rowData || [];
+      const rows = rowData.map((r) =>
+        (r.values || []).map((cell) => ({
+          val: cell.formattedValue || "",
+          bg: rgbToHex(cell.effectiveFormat?.backgroundColor),
+          fg: rgbToHex(cell.effectiveFormat?.textFormat?.foregroundColor),
+          bold: Boolean(cell.effectiveFormat?.textFormat?.bold),
+        }))
+      );
+
+      const merges = (sheetObj.merges || []).map((m) => ({
+        startRow: m.startRowIndex ?? 0,
+        endRow: m.endRowIndex ?? 0,
+        startCol: m.startColumnIndex ?? 0,
+        endCol: m.endColumnIndex ?? 0,
+      }));
+
+      return {
+        title: sheetObj.properties?.title || fallbackTitle,
+        rows,
+        merges,
+      };
+    };
+
+    const allSheets = gridRes.data.sheets || [];
+    const putraSheet = allSheets.find((s) => s.properties?.title === putraTitle);
+    const putriSheet = allSheets.find((s) => s.properties?.title === putriTitle);
 
     return NextResponse.json({
       success: true,
-      putra: { title: putraTitle, rows: putraRows },
-      putri: { title: putriTitle, rows: putriRows },
+      putra: parseSheetGrid(putraSheet, putraTitle),
+      putri: parseSheetGrid(putriSheet, putriTitle),
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
