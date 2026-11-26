@@ -1,0 +1,19 @@
+{
+  "name": "ADMIN PANEL SEP - SMA Progresif",
+  "short_name": "Admin SEP",
+  "description": "Panel Admin Monitoring Ekstrakurikuler & Bisyaroh SEP",
+  "start_url": "/admin",
+  "scope": "/admin",
+  "display": "standalone",
+  "background_color": "#f8f9ff",
+  "theme_color": "#131b2e",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/sep-icon.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}
