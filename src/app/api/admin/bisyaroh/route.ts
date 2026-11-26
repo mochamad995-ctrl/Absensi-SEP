@@ -46,6 +46,8 @@ export async function GET(req: NextRequest) {
         currentSheet: "",
         dates: ["", "", "", "", ""],
         list: [],
+        bisyarohSheetName: "",
+        eksternalList: [],
       });
     }
 
@@ -113,13 +115,13 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Parse Guru Eksternal from BISYAROH sheet
     const eksternalRows = (eksternalRes.data.values as string[][]) || [];
     const eksternalList = [];
     let lastNo = "";
     let lastKegiatan = "";
 
-    for (const r of eksternalRows) {
+    for (let idx = 0; idx < eksternalRows.length; idx++) {
+      const r = eksternalRows[idx];
       const no = r[0] ? String(r[0]).trim() : lastNo;
       const kegiatan = r[1] ? String(r[1]).trim() : lastKegiatan;
       if (r[0]) lastNo = no;
@@ -130,12 +132,13 @@ export async function GET(req: NextRequest) {
       if (!pembimbing && !gender) continue;
 
       eksternalList.push({
+        rowIndex: idx + 2,
         no: no || "-",
         kegiatan: kegiatan || "-",
         gender: gender || "-",
         pembimbing: pembimbing || "-",
-        frekuensi: r[4] ? String(r[4]).trim() : "0",
-        nominal: r[5] ? String(r[5]).trim() : "0",
+        frekuensi: r[4] ? String(r[4]).replace(/,/g, "").trim() : "0",
+        nominal: r[5] ? String(r[5]).replace(/,/g, "").trim() : "0",
         subTotal: r[6] ? String(r[6]).trim() : "0",
         total: r[7] ? String(r[7]).trim() : "0",
       });
@@ -190,7 +193,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (body.action === "save_presensi") {
-      const colLetter = body.colLetter as string; // E, F, G, H, or I
+      const colLetter = body.colLetter as string;
       const items: { rowIndex: number; status: string }[] = body.items || [];
       if (!colLetter || !["E", "F", "G", "H", "I"].includes(colLetter)) {
         return NextResponse.json(
@@ -215,6 +218,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         success: true,
         message: `Presensi guru (${colLetter}) berhasil disimpan ke Spreadsheet!`,
+      });
+    }
+
+    if (body.action === "save_bisyaroh_eksternal") {
+      const items: { rowIndex: number; frekuensi: string; nominal: string }[] =
+        body.items || [];
+      const data = items.map((it) => ({
+        range: `'${sheetName}'!E${it.rowIndex}:F${it.rowIndex}`,
+        values: [[Number(it.frekuensi) || 0, Number(it.nominal) || 0]],
+      }));
+
+      await sheets.spreadsheets.values.batchUpdate({
+        spreadsheetId: BISYAROH_SPREADSHEET_ID,
+        requestBody: {
+          valueInputOption: "USER_ENTERED",
+          data,
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: "Data Bisyaroh Guru Eksternal berhasil disimpan ke Spreadsheet!",
       });
     }
 

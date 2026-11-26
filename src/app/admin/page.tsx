@@ -121,6 +121,7 @@ export default function AdminPage() {
   const [bisyarohEksternalSheet, setBisyarohEksternalSheet] = useState("");
   const [eksternalList, setEksternalList] = useState<
     {
+      rowIndex: number;
       no: string;
       kegiatan: string;
       gender: string;
@@ -823,47 +824,118 @@ export default function AdminPage() {
             </div>
 
             {bisyarohSubTab === "eksternal" ? (
-              <div className="overflow-x-auto rounded-xl border border-[#e5eeff] bg-white shadow-sm">
-                <table className="w-full text-left text-sm">
-                  <thead className="border-b border-[#e5eeff] bg-[#eff4ff] text-xs font-bold uppercase text-[#45464d]">
-                    <tr>
-                      <th className="px-3 py-3 text-center">No</th>
-                      <th className="px-3 py-3">Kegiatan</th>
-                      <th className="px-3 py-3">Gender</th>
-                      <th className="px-3 py-3">Nama Pembimbing</th>
-                      <th className="px-3 py-3 text-center">Frek</th>
-                      <th className="px-3 py-3 text-right">Nominal</th>
-                      <th className="px-3 py-3 text-right">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#eff4ff]">
-                    {eksternalList.map((ex, idx) => (
-                      <tr key={idx} className="hover:bg-[#f8f9ff]">
-                        <td className="px-3 py-2.5 text-center text-xs text-[#45464d]">
-                          {ex.no}
-                        </td>
-                        <td className="px-3 py-2.5 font-bold text-[#0b1c30]">
-                          {ex.kegiatan}
-                        </td>
-                        <td className="px-3 py-2.5 text-xs text-[#45464d]">
-                          {ex.gender}
-                        </td>
-                        <td className="px-3 py-2.5 font-semibold text-[#006c4a]">
-                          {ex.pembimbing}
-                        </td>
-                        <td className="px-3 py-2.5 text-center font-bold">
-                          {ex.frekuensi}
-                        </td>
-                        <td className="px-3 py-2.5 text-right text-xs text-[#45464d]">
-                          {ex.nominal}
-                        </td>
-                        <td className="px-3 py-2.5 text-right font-bold text-[#131b2e]">
-                          {ex.total}
-                        </td>
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#e5eeff] bg-white p-3 shadow-sm">
+                  <span className="text-xs text-[#45464d]">
+                    Edit langsung <strong className="text-[#0b1c30]">Frekuensi</strong> &amp;{" "}
+                    <strong className="text-[#0b1c30]">Nominal</strong> lalu klik Simpan.
+                  </span>
+                  <button
+                    onClick={async () => {
+                      if (!bisyarohEksternalSheet) return;
+                      setSavingBisyaroh(true);
+                      try {
+                        const res = await fetch("/api/admin/bisyaroh", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            action: "save_bisyaroh_eksternal",
+                            sheetName: bisyarohEksternalSheet,
+                            items: eksternalList.map((ex) => ({
+                              rowIndex: ex.rowIndex,
+                              frekuensi: ex.frekuensi,
+                              nominal: ex.nominal,
+                            })),
+                          }),
+                        });
+                        const data = await res.json();
+                        alert(data.message || "Bisyaroh tersimpan!");
+                      } finally {
+                        setSavingBisyaroh(false);
+                      }
+                    }}
+                    disabled={savingBisyaroh}
+                    className="flex items-center gap-1.5 rounded-xl bg-[#006c4a] px-4 py-2 text-xs font-bold text-white hover:bg-[#005137] disabled:opacity-50"
+                  >
+                    <Save className="h-4 w-4" />
+                    {savingBisyaroh ? "Menyimpan..." : "Simpan Bisyaroh"}
+                  </button>
+                </div>
+
+                <div className="overflow-x-auto rounded-xl border border-[#e5eeff] bg-white shadow-sm">
+                  <table className="w-full text-left text-sm">
+                    <thead className="border-b border-[#e5eeff] bg-[#eff4ff] text-xs font-bold uppercase text-[#45464d]">
+                      <tr>
+                        <th className="px-3 py-3 text-center">No</th>
+                        <th className="px-3 py-3">Kegiatan</th>
+                        <th className="px-3 py-3">Gender</th>
+                        <th className="px-3 py-3">Nama Pembimbing</th>
+                        <th className="px-3 py-3 text-center">Frek</th>
+                        <th className="px-3 py-3 text-right">Nominal</th>
+                        <th className="px-3 py-3 text-right">Total</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-[#eff4ff]">
+                      {eksternalList.map((ex, idx) => {
+                        const frekNum = parseFloat(ex.frekuensi) || 0;
+                        const nomNum = parseFloat(ex.nominal) || 0;
+                        const calcTotal = (frekNum * nomNum).toLocaleString("id-ID");
+                        return (
+                          <tr key={ex.rowIndex} className="hover:bg-[#f8f9ff]">
+                            <td className="px-3 py-2.5 text-center text-xs text-[#45464d]">
+                              {ex.no}
+                            </td>
+                            <td className="px-3 py-2.5 font-bold text-[#0b1c30]">
+                              {ex.kegiatan}
+                            </td>
+                            <td className="px-3 py-2.5 text-xs text-[#45464d]">
+                              {ex.gender}
+                            </td>
+                            <td className="px-3 py-2.5 font-semibold text-[#006c4a]">
+                              {ex.pembimbing}
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              <input
+                                type="number"
+                                min={0}
+                                value={ex.frekuensi}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setEksternalList((prev) =>
+                                    prev.map((item, i) =>
+                                      i === idx ? { ...item, frekuensi: val } : item
+                                    )
+                                  );
+                                }}
+                                className="w-16 rounded-lg border border-[#c6c6cd] bg-[#f8f9ff] py-1 text-center text-xs font-bold text-[#0b1c30] focus:border-[#006c4a] focus:bg-white focus:outline-none"
+                              />
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              <input
+                                type="number"
+                                min={0}
+                                step={5000}
+                                value={ex.nominal}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setEksternalList((prev) =>
+                                    prev.map((item, i) =>
+                                      i === idx ? { ...item, nominal: val } : item
+                                    )
+                                  );
+                                }}
+                                className="w-24 rounded-lg border border-[#c6c6cd] bg-[#f8f9ff] px-2 py-1 text-right text-xs font-bold text-[#0b1c30] focus:border-[#006c4a] focus:bg-white focus:outline-none"
+                              />
+                            </td>
+                            <td className="px-3 py-2.5 text-right font-bold text-[#131b2e]">
+                              Rp {calcTotal}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             ) : (
               <>
