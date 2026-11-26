@@ -107,17 +107,17 @@ export default function KlaimModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
-      <div className="flex max-h-[88vh] w-full max-w-lg flex-col rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#131b2e]/60 p-4 backdrop-blur-sm">
+      <div className="flex max-h-[88vh] w-full max-w-lg flex-col rounded-2xl border border-[#c6c6cd] bg-white shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
-          <div className="flex items-center gap-2 text-base font-bold text-white">
-            <UserPlus className="h-5 w-5 text-blue-400" />
+        <div className="flex items-center justify-between border-b border-[#e5eeff] px-5 py-4">
+          <div className="flex items-center gap-2 text-base font-bold text-[#0b1c30]">
+            <UserPlus className="h-5 w-5 text-[#006c4a]" />
             Tambahkan / Pindahkan Murid
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white"
+            className="rounded-lg p-1.5 text-[#45464d] hover:bg-[#eff4ff] hover:text-[#0b1c30]"
           >
             <X className="h-5 w-5" />
           </button>
@@ -125,42 +125,42 @@ export default function KlaimModal({
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
-          <div className="rounded-xl border border-blue-500/40 bg-slate-950 px-3.5 py-2.5 text-xs">
-            <span className="text-slate-400">Target Ekstrakurikuler:</span>
-            <div className="mt-0.5 text-sm font-bold text-blue-400">
+          <div className="rounded-xl border border-[#82f5c1] bg-[#eff4ff] px-3.5 py-2.5 text-xs">
+            <span className="text-[#45464d]">Target Ekstrakurikuler:</span>
+            <div className="mt-0.5 text-sm font-bold text-[#006c4a]">
               {targetEkstra}
             </div>
           </div>
 
           <div className="relative">
-            <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-blue-400" />
+            <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-[#006c4a]" />
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Ketik nama siswa atau kelas..."
               autoFocus
-              className="w-full rounded-xl border border-blue-500/50 bg-slate-950 py-3 pl-10 pr-4 text-sm font-medium text-white placeholder-slate-400 focus:border-blue-400 focus:outline-none"
+              className="w-full rounded-xl border border-[#c6c6cd] bg-[#f8f9ff] py-3 pl-10 pr-4 text-sm font-medium text-[#0b1c30] placeholder-[#76777d] focus:border-[#006c4a] focus:bg-white focus:outline-none"
             />
           </div>
 
-          <div className="min-h-[180px] max-h-[340px] overflow-y-auto rounded-xl border border-slate-800 bg-slate-950 divide-y divide-slate-800">
+          <div className="min-h-[180px] max-h-[340px] overflow-y-auto rounded-xl border border-[#e5eeff] bg-[#f8f9ff] divide-y divide-[#e5eeff]">
             {loadingMaster ? (
-              <div className="flex items-center justify-center gap-2 py-12 text-sm text-sky-400">
+              <div className="flex items-center justify-center gap-2 py-12 text-sm text-[#006c4a]">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Memuat database 842 siswa...
               </div>
             ) : errorMsg ? (
-              <div className="p-4 text-center text-sm text-red-400">
+              <div className="p-4 text-center text-sm text-[#ba1a1a]">
                 {errorMsg}
               </div>
             ) : !query.trim() ? (
-              <div className="py-12 text-center text-xs text-slate-400">
+              <div className="py-12 text-center text-xs text-[#45464d]">
                 Ketik nama atau kelas di atas untuk mencari ({masterList.length}{" "}
                 siswa siap dicari).
               </div>
             ) : matches.length === 0 ? (
-              <div className="py-12 text-center text-xs text-amber-400">
+              <div className="py-12 text-center text-xs text-[#ba1a1a]">
                 Siswa &ldquo;{query}&rdquo; tidak ditemukan di database.
               </div>
             ) : (
@@ -170,34 +170,34 @@ export default function KlaimModal({
                 return (
                   <div
                     key={s.rowId}
-                    className="flex items-center justify-between gap-3 p-3.5 hover:bg-slate-900/80"
+                    className="flex items-center justify-between gap-3 bg-white p-3.5 hover:bg-[#eff4ff]"
                   >
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-sm font-bold text-white">
+                        <span className="text-sm font-bold text-[#0b1c30]">
                           {s.nama}
                         </span>
-                        <span className="rounded bg-sky-500/20 px-1.5 py-0.5 text-[11px] font-bold text-sky-300">
+                        <span className="rounded bg-[#dae2fd] px-1.5 py-0.5 text-[11px] font-bold text-[#131b2e]">
                           {s.kelas}
                         </span>
                         <span
                           className={`rounded px-1.5 py-0.5 text-[10px] font-bold text-white ${
-                            s.jk === "Putra" ? "bg-blue-600" : "bg-pink-600"
+                            s.jk === "Putra" ? "bg-[#131b2e]" : "bg-[#006c4a]"
                           }`}
                         >
                           {s.jk}
                         </span>
                       </div>
-                      <div className="mt-1 text-xs text-slate-400">
-                        Ekstra saat ini:{" "}
-                        <span className="font-semibold text-blue-400">
+                      <div className="mt-1 text-xs text-[#45464d]">
+                        Ekstra sebelumnya:{" "}
+                        <span className="font-semibold text-[#004c6e]">
                           {s.ekstraLama}
                         </span>
                       </div>
                     </div>
 
                     {isAlreadyHere ? (
-                      <span className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-emerald-600/20 px-2.5 py-1.5 text-xs font-bold text-emerald-400">
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-[#82f5c1] px-2.5 py-1.5 text-xs font-bold text-[#005137]">
                         <CheckCircle2 className="h-3.5 w-3.5" />
                         Sudah di sini
                       </span>
@@ -205,7 +205,7 @@ export default function KlaimModal({
                       <button
                         onClick={() => handleKlaim(s)}
                         disabled={movingId === s.rowId}
-                        className="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-500 disabled:opacity-50"
+                        className="shrink-0 rounded-lg bg-[#006c4a] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#005137] disabled:opacity-50"
                       >
                         {movingId === s.rowId ? "Memindah..." : "Pilih & Pindahkan"}
                       </button>

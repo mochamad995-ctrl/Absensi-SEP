@@ -3,19 +3,19 @@ import "./globals.css";
 import PwaInstallBanner from "@/components/PwaInstallBanner";
 
 export const metadata: Metadata = {
-  title: "PRESENSI SEP - SMA Progresif",
+  title: "PRESENSI SEP — SMA Progresif Bumi Shalawat",
   description:
     "Aplikasi Presensi & Penilaian Rapot Ekstrakurikuler SMA Progresif Bumi Shalawat",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
     title: "Presensi SEP",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#2563eb",
+  themeColor: "#131b2e",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -27,12 +27,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id" className="dark">
+    <html lang="id">
       <head>
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="/icon.svg" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap"
+          rel="stylesheet"
+        />
       </head>
-      <body className="min-h-screen bg-[#0a0d14] text-slate-100 antialiased">
+      <body className="min-h-screen bg-[#f8f9ff] text-[#0b1c30] antialiased">
         {children}
         <PwaInstallBanner />
       </body>
