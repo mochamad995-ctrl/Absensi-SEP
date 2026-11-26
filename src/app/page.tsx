@@ -59,6 +59,7 @@ export default function HomePage() {
   const [rapotStudents, setRapotStudents] = useState<RapotItem[]>([]);
   const [loadingRapot, setLoadingRapot] = useState(false);
   const [savingRapot, setSavingRapot] = useState(false);
+  const [searchRapot, setSearchRapot] = useState("");
 
   const [klaimOpen, setKlaimOpen] = useState(false);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
@@ -290,6 +291,73 @@ export default function HomePage() {
     );
   }, [students, searchAbsensi]);
 
+  const rapotStats = useMemo(() => {
+    const total = rapotStudents.length;
+    let sudah = 0;
+    let sum = 0;
+    for (const s of rapotStudents) {
+      const n = parseFloat(s.nilai);
+      if (!isNaN(n) && String(s.nilai).trim() !== "") {
+        sudah++;
+        sum += n;
+      }
+    }
+    return {
+      total,
+      sudah,
+      belum: total - sudah,
+      rerata: sudah > 0 ? (sum / sudah).toFixed(1) : "0",
+    };
+  }, [rapotStudents]);
+
+  const filteredRapot = useMemo(() => {
+    const q = searchRapot.trim().toLowerCase();
+    if (!q) return rapotStudents;
+    return rapotStudents.filter(
+      (s) =>
+        s.nama.toLowerCase().includes(q) || s.kelas.toLowerCase().includes(q)
+    );
+  }, [rapotStudents, searchRapot]);
+
+  const handleRapotKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    idx: number
+  ) => {
+    if (e.key === "Enter" || e.key === "ArrowDown") {
+      e.preventDefault();
+      const next = document.getElementById(`rapot-input-${idx + 1}`);
+      if (next) next.focus();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      const prev = document.getElementById(`rapot-input-${idx - 1}`);
+      if (prev) prev.focus();
+    }
+  };
+
+  const handleExportRapotPDF = () => {
+    if (!session) return;
+    const doc = new jsPDF();
+    doc.setFontSize(14);
+    doc.text(`NILAI RAPOT EKSTRAKULIKULER - ${session.displayName}`, 14, 16);
+    doc.setFontSize(10);
+    doc.text(`Pembina: ${session.pengajar}`, 14, 23);
+
+    autoTable(doc, {
+      startY: 30,
+      head: [["No", "Nama Siswa", "Kelas", "Nilai", "Predikat", "Deskripsi"]],
+      body: rapotStudents.map((s, idx) => [
+        idx + 1,
+        s.nama,
+        s.kelas,
+        s.nilai || "-",
+        s.predikat,
+        s.deskripsi,
+      ]),
+    });
+
+    doc.save(`Nilai_Rapot_${session.displayName.replace(/\s+/g, "_")}.pdf`);
+  };
+
   const stats = useMemo(() => {
     const counts = { Hadir: 0, Izin: 0, Sakit: 0, Alfa: 0, Belum: 0 };
     for (const s of students) {
@@ -434,7 +502,7 @@ export default function HomePage() {
                 className="flex items-center gap-1.5 rounded-xl bg-sky-600 px-3.5 py-2.5 text-xs font-bold text-white hover:bg-sky-500"
               >
                 <UserPlus className="h-4 w-4" />
-                Klaim Siswa
+                Tambahkan Murid
               </button>
               <button
                 onClick={handleExportPDF}
@@ -535,22 +603,72 @@ export default function HomePage() {
       {/* TAB 2: PENILAIAN RAPOT */}
       {activeTab === "rapot" && (
         <div className="space-y-4">
+          {/* Statistik Penilaian */}
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+            <div className="rounded-xl border border-slate-700 bg-slate-900/80 p-3 text-center">
+              <div className="text-[10px] font-bold uppercase text-slate-400">
+                Total Siswa
+              </div>
+              <div className="mt-0.5 text-lg font-extrabold text-white">
+                {rapotStats.total}
+              </div>
+            </div>
+            <div className="rounded-xl border border-emerald-500/30 bg-slate-900/80 p-3 text-center">
+              <div className="text-[10px] font-bold uppercase text-slate-400">
+                Sudah Dinilai
+              </div>
+              <div className="mt-0.5 text-lg font-extrabold text-emerald-400">
+                {rapotStats.sudah}
+              </div>
+            </div>
+            <div className="rounded-xl border border-amber-500/30 bg-slate-900/80 p-3 text-center">
+              <div className="text-[10px] font-bold uppercase text-slate-400">
+                Belum Dinilai
+              </div>
+              <div className="mt-0.5 text-lg font-extrabold text-amber-400">
+                {rapotStats.belum}
+              </div>
+            </div>
+            <div className="rounded-xl border border-blue-500/30 bg-slate-900/80 p-3 text-center">
+              <div className="text-[10px] font-bold uppercase text-slate-400">
+                Rata-rata
+              </div>
+              <div className="mt-0.5 text-lg font-extrabold text-sky-400">
+                {rapotStats.rerata}
+              </div>
+            </div>
+          </div>
+
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-xs text-slate-400">
-              Aturan: A (≥91.6) | A- (83.4-91.5) | B+ (75.1-83.3) | B (66.6-75.0)
-              | B- (58.4-66.5) | C (&lt;58.4)
-            </p>
-            <div className="flex gap-2">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+              <input
+                type="text"
+                value={searchRapot}
+                onChange={(e) => setSearchRapot(e.target.value)}
+                placeholder="Cari nama siswa atau kelas..."
+                className="w-full rounded-xl border border-slate-700 bg-slate-900 py-2.5 pl-10 pr-4 text-sm text-white placeholder-slate-400 focus:border-blue-500 focus:outline-none"
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={handleSetNilaiSeragam}
-                className="rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-blue-500"
+                className="rounded-xl bg-blue-600 px-3.5 py-2.5 text-xs font-bold text-white hover:bg-blue-500"
               >
                 Set Nilai Seragam
               </button>
               <button
+                onClick={handleExportRapotPDF}
+                className="flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800 px-3.5 py-2.5 text-xs font-bold text-slate-200 hover:bg-slate-700"
+              >
+                <FileDown className="h-4 w-4" />
+                PDF
+              </button>
+              <button
                 onClick={handleSaveRapot}
                 disabled={savingRapot || rapotStudents.length === 0}
-                className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-500 disabled:opacity-50"
               >
                 {savingRapot ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -561,6 +679,13 @@ export default function HomePage() {
               </button>
             </div>
           </div>
+
+          <p className="rounded-xl border border-dashed border-blue-500/40 bg-slate-900/70 px-3.5 py-2 text-xs text-slate-300">
+            <strong className="text-blue-400">Aturan:</strong> A (≥91.6) | A-
+            (83.4–91.5) | B+ (75.1–83.3) | B (66.6–75.0) | B- (58.4–66.5) | C
+            (&lt;58.4) • Tekan <strong className="text-white">Enter</strong> /{" "}
+            <strong className="text-white">Panah Bawah</strong> untuk pindah baris cepat.
+          </p>
 
           <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/90">
             <table className="w-full text-left text-sm">
@@ -582,49 +707,72 @@ export default function HomePage() {
                       Memuat data nilai rapot...
                     </td>
                   </tr>
-                ) : rapotStudents.length === 0 ? (
+                ) : filteredRapot.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="py-12 text-center text-slate-400">
-                      Tidak ada siswa terdaftar pada ekstrakurikuler ini.
+                      Tidak ada siswa ditemukan.
                     </td>
                   </tr>
                 ) : (
-                  rapotStudents.map((s, idx) => (
-                    <tr key={s.rowId} className="hover:bg-slate-800/40">
-                      <td className="px-3 py-3 text-center text-xs text-slate-400">
-                        {idx + 1}
-                      </td>
-                      <td className="px-3 py-3 font-bold text-white">
-                        {s.nama}
-                      </td>
-                      <td className="px-3 py-3">
-                        <span className="rounded-md bg-sky-500/15 px-2 py-0.5 text-xs font-bold text-sky-300">
-                          {s.kelas}
-                        </span>
-                      </td>
-                      <td className="px-3 py-3 text-center">
-                        <input
-                          type="number"
-                          min={0}
-                          max={100}
-                          value={s.nilai}
-                          onChange={(e) =>
-                            handleRapotNilaiChange(idx, e.target.value)
-                          }
-                          placeholder="0-100"
-                          className="w-20 rounded-lg border border-blue-500/60 bg-slate-950 py-1.5 text-center text-sm font-bold text-white focus:border-blue-400 focus:outline-none"
-                        />
-                      </td>
-                      <td className="px-3 py-3 text-center">
-                        <span className="rounded-md bg-slate-800 px-2.5 py-1 text-xs font-extrabold text-amber-300">
-                          {s.predikat}
-                        </span>
-                      </td>
-                      <td className="px-3 py-3 text-xs text-slate-300">
-                        {s.deskripsi}
-                      </td>
-                    </tr>
-                  ))
+                  filteredRapot.map((s, idx) => {
+                    const origIdx = rapotStudents.findIndex(
+                      (r) => r.rowId === s.rowId
+                    );
+                    const predColor =
+                      s.predikat === "A"
+                        ? "bg-emerald-600/25 text-emerald-300 border-emerald-500/40"
+                        : s.predikat === "A-"
+                        ? "bg-blue-600/25 text-blue-300 border-blue-500/40"
+                        : s.predikat === "B+"
+                        ? "bg-sky-600/25 text-sky-300 border-sky-500/40"
+                        : s.predikat === "B" || s.predikat === "B-"
+                        ? "bg-amber-600/25 text-amber-300 border-amber-500/40"
+                        : s.predikat === "C"
+                        ? "bg-red-600/25 text-red-300 border-red-500/40"
+                        : "bg-slate-800 text-slate-400 border-slate-700";
+
+                    return (
+                      <tr key={s.rowId} className="hover:bg-slate-800/40">
+                        <td className="px-3 py-3 text-center text-xs text-slate-400">
+                          {idx + 1}
+                        </td>
+                        <td className="px-3 py-3 font-bold text-white">
+                          {s.nama}
+                        </td>
+                        <td className="px-3 py-3">
+                          <span className="rounded-md bg-sky-500/15 px-2 py-0.5 text-xs font-bold text-sky-300">
+                            {s.kelas}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3 text-center">
+                          <input
+                            id={`rapot-input-${idx}`}
+                            type="number"
+                            min={0}
+                            max={100}
+                            step="any"
+                            value={s.nilai}
+                            onChange={(e) =>
+                              handleRapotNilaiChange(origIdx, e.target.value)
+                            }
+                            onKeyDown={(e) => handleRapotKeyDown(e, idx)}
+                            placeholder="0-100"
+                            className="w-20 rounded-lg border border-blue-500/60 bg-slate-950 py-1.5 text-center text-sm font-bold text-white focus:border-blue-400 focus:outline-none"
+                          />
+                        </td>
+                        <td className="px-3 py-3 text-center">
+                          <span
+                            className={`inline-block rounded-md border px-2.5 py-1 text-xs font-extrabold ${predColor}`}
+                          >
+                            {s.predikat}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3 text-xs text-slate-300">
+                          {s.deskripsi}
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>

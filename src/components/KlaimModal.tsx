@@ -113,7 +113,7 @@ export default function KlaimModal({
         <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
           <div className="flex items-center gap-2 text-base font-bold text-white">
             <UserPlus className="h-5 w-5 text-blue-400" />
-            Klaim / Masukkan Siswa
+            Tambahkan / Pindahkan Murid
           </div>
           <button
             onClick={onClose}
@@ -207,7 +207,7 @@ export default function KlaimModal({
                         disabled={movingId === s.rowId}
                         className="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-500 disabled:opacity-50"
                       >
-                        {movingId === s.rowId ? "Memindah..." : "Pindahkan"}
+                        {movingId === s.rowId ? "Memindah..." : "Pilih & Pindahkan"}
                       </button>
                     )}
                   </div>
